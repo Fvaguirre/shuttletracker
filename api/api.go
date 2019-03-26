@@ -12,7 +12,6 @@ import (
 
 	"github.com/wtg/shuttletracker"
 	"github.com/wtg/shuttletracker/log"
-	"github.com/wtg/shuttletracker/updater"
 )
 
 // Config holds API settings.
@@ -31,23 +30,31 @@ type API struct {
 	handler http.Handler
 	ms      shuttletracker.ModelService
 	msg     shuttletracker.MessageService
-	updater *updater.Updater
+	updater shuttletracker.UpdaterService
+	fm      *fusionManager
+	etaManager shuttletracker.ETAService
 }
 
 // New initializes the application given a config and connects to backends.
 // It also seeds any needed information to the database.
-func New(cfg Config, ms shuttletracker.ModelService, msg shuttletracker.MessageService, us shuttletracker.UserService, updater *updater.Updater) (*API, error) {
+func New(cfg Config, ms shuttletracker.ModelService, msg shuttletracker.MessageService, us shuttletracker.UserService, updater shuttletracker.UpdaterService, etaManager shuttletracker.ETAService) (*API, error) {
 	// Set up CAS authentication
 	url, err := url.Parse(cfg.CasURL)
 	if err != nil {
 		return nil, err
 	}
+
+	// Set up fusion manager
+	fm := newFusionManager(etaManager)
+
 	// Create API instance to store database session and collections
 	api := API{
 		cfg:     cfg,
 		ms:      ms,
 		msg:     msg,
 		updater: updater,
+		fm:      fm,
+		etaManager: etaManager,
 	}
 
 	r := chi.NewRouter()
@@ -73,10 +80,10 @@ func New(cfg Config, ms shuttletracker.ModelService, msg shuttletracker.MessageS
 		r.Get("/", api.UpdatesHandler)
 	})
 
-	//Hisory
+	// History
 	r.Route("/history", func(r chi.Router) {
 		r.Get("/", api.HistoryHandler)
-		})
+	})
 
 	// Admin message
 	r.Route("/adminMessage", func(r chi.Router) {
@@ -108,11 +115,14 @@ func New(cfg Config, ms shuttletracker.ModelService, msg shuttletracker.MessageS
 		})
 	})
 
+	// Fusion
+	r.Mount("/fusion", api.fm.router(cli.casauth))
+
 	r.Get("/logout/", cli.logout)
 	// Admin
 	r.Route("/admin", func(r chi.Router) {
 		r.Use(cli.casauth)
-		r.Get("/", api.AdminHandler)
+		r.Get("/*", api.AdminHandler)
 		r.Get("/login", api.AdminHandler)
 		r.Get("/logout", cli.logout)
 	})
@@ -126,6 +136,9 @@ func New(cfg Config, ms shuttletracker.ModelService, msg shuttletracker.MessageS
 
 	r.Get("/", api.IndexHandler)
 	r.Get("/about", api.IndexHandler)
+	r.Get("/schedules", api.IndexHandler)
+	r.Get("/settings", api.IndexHandler)
+	r.Get("/etas", api.IndexHandler)
 
 	// iTRAK data feed endpoint
 	r.Get("/datafeed", api.DataFeedHandler)
@@ -150,7 +163,6 @@ func (api *API) Run() {
 	if err := http.ListenAndServe(api.cfg.ListenURL, api.handler); err != nil {
 		log.WithError(err).Error("Unable to serve.")
 	}
-
 }
 
 // IndexHandler serves the index page.
@@ -166,8 +178,7 @@ func (api *API) AdminHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin", 301)
 	}
 	w.Header().Set("Cache-Control", "no-cache")
-	http.ServeFile(w, r, "admin.html")
-
+	http.ServeFile(w, r, "static/admin.html")
 }
 
 //KeyHandler sends Mapbox api key to authenticated user
