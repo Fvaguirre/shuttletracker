@@ -49,6 +49,7 @@ def getAvgVelocity(data, route_id, current_time, weekday):
 
             if j["route_id"] == route_id and dataWeekday == weekday and time_in_range(start, end, dataTime):
                 totalVelocity += j["speed"]
+
                 count += 1
             else:
                 continue
@@ -58,18 +59,18 @@ def getAvgVelocity(data, route_id, current_time, weekday):
 if __name__ == '__main__':
     # Get what day of the week it is today
     targetWeekday = dt.datetime.today().weekday()
-    targetWeekday = 2
+    # targetWeekday = 4
     # Get what the current time is now
     targetTime = dt.datetime.now().time()
-    targetTime = dt.time(22, 45, 50)
+    # targetTime = dt.time(22, 45, 50)
 
 
     # Specify which route you want to calculate the average velocity for
-    targetRoute = 20
+    targetRoute = 2
 
 
     # Currently on localhost
-    url = "http://localhost:8080/history"
+    url = "http://shuttles.rpi.edu/history"
 
     response = urllib.request.urlopen(url)
     data = json.loads(response.read())
@@ -80,5 +81,4 @@ if __name__ == '__main__':
     #         print(j["time"].split(":"))
         # print(i)
 
-    print(getAvgVelocity(data, 1, targetTime, targetWeekday))
-
+    print(getAvgVelocity(data, targetRoute, targetTime, targetWeekday))

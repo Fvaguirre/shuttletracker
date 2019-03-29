@@ -3,12 +3,14 @@
 !auth
 !cmd
 !config
+!go.mod
+!go.sum
+!eta
 !log
 !mock
 !postgres
 !static
 !updater
-!vendor/vendor.json
 !admin.html
 !*.go
 !index.html
@@ -16,3 +18,4 @@
 !frontend
 frontend/node_modules
 frontend/dist
+!nginx.conf.sigil
