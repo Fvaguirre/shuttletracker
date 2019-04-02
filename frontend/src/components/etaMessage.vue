@@ -19,16 +19,12 @@ export default Vue.extend({
       const now = new Date();
 
       let newMessage = `${this.etaInfo.route.name} shuttle arriving at ${this.etaInfo.stop.name}`;
-      // check if last character is a '.'
-      const lastChar = newMessage.slice(-1);
       // more than 1 min 30 sec?
       if (this.etaInfo.eta.eta.getTime() - now.getTime() > 1.5 * 60 * 1000 && !this.etaInfo.eta.arriving) {
         newMessage += ` in ${relativeTime(now, this.etaInfo.eta.eta)}`;
       }
-      // if last character is not a '.', then append period
-      if (lastChar !== '.') {
-        newMessage += '.';
-      }
+      newMessage += '.';
+
       return newMessage;
     },
   },
@@ -97,3 +93,4 @@ function relativeTime(from: Date, to: Date): string {
     }
 }
 </style>
+ 
